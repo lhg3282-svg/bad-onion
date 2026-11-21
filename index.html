@@ -957,7 +957,7 @@ function updatePlay(dt,L){
     if(mx||mz){P.target=null;P.pending=null;}
     else if(P.target){const dx=P.target.x-P.pos.x,dz=P.target.z-P.pos.z,d=Math.hypot(dx,dz);if(d<.25){P.target=null;if(P.pending){const f=P.pending;P.pending=null;f();}}else{mx=dx/d;mz=dz/d;}}}
   const mag=Math.hypot(mx,mz);
-  if(mag>.05){const k=Math.min(1,mag);mx/=mag;mz/=mag;P.pos.x+=mx*7*k*dt;P.pos.z+=mz*7*k*dt;const r=Math.hypot(P.pos.x,P.pos.z);if(r>40){P.pos.x*=40/r;P.pos.z*=40/r;}
+  if(mag>.05){const k=Math.min(1,mag);mx/=mag;mz/=mag;let stp=7*k*dt;if(P.target){const dd=Math.hypot(P.target.x-P.pos.x,P.target.z-P.pos.z);if(stp>dd)stp=dd;}P.pos.x+=mx*stp;P.pos.z+=mz*stp;const r=Math.hypot(P.pos.x,P.pos.z);if(r>40){P.pos.x*=40/r;P.pos.z*=40/r;}
     let da=Math.atan2(mx,mz)-C.g.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));C.g.rotation.y+=da*Math.min(1,dt*12);P.walk+=dt*11*k;}
   else{P.walk*=.85;if(active){let da=Math.atan2(active.x-P.pos.x,active.z-P.pos.z)-C.g.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));C.g.rotation.y+=da*Math.min(1,dt*6);}}
   const sw=Math.sin(P.walk)*(mag>.05?.7:0);C.legs[0].rotation.x=sw;C.legs[1].rotation.x=-sw;
