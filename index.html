@@ -167,6 +167,12 @@ svg.rb{animation:rbglow 3s linear infinite;overflow:visible}
 .rank .sc{text-align:right;font-family:'Jua';font-size:18px;white-space:nowrap}
 .rank .sc small{display:block;font-family:'Gowun Dodum';font-size:12px;opacity:.7}
 #shReg{background:var(--onion);color:#fff;width:100%;margin-top:10px}
+.selbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px}
+.selbar small{font-size:14px;opacity:.75}
+.selbar button{min-height:36px;padding:4px 14px;font-size:15px;background:#eadcc2;box-shadow:none}
+.selbar button:disabled{opacity:.42}
+.slot .ck{position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--onion);color:#fff;font-size:11px;line-height:16px;font-family:'Jua';display:none}
+.slot.on .ck{display:block}
 #shReg:disabled,.sz button:disabled,.swc:disabled{opacity:.42}
 .empty-note{text-align:center;padding:16px;opacity:.7;font-size:15px}
 .dexwrap{overflow-x:auto;margin-top:10px}
@@ -349,7 +355,7 @@ body:not(.play) #joy{display:none}
   <button class="x" data-close>닫기</button><h2>채소 상점</h2>
   <p class="ptline">채소를 등록하면 <b>+1P</b> · 포인트로 텃밭을 꾸밀 수 있어요</p>
   <div class="tabs" id="shopTabs"><button data-tab="reg" class="on">채소 등록</button><button data-tab="rank">랭킹</button><button data-tab="seed">씨앗 해금</button></div>
-  <div id="shopReg"><div class="slots" id="shSlots"></div><div class="detail" id="shDetail"></div><button id="shReg" disabled>상점에 등록하기 (+1P)</button></div>
+  <div id="shopReg"><div class="selbar"><small id="shHint">칸을 눌러 여러 개를 골라요</small><button id="shAll">전체 선택</button></div><div class="slots" id="shSlots"></div><div class="detail" id="shDetail"></div><button id="shReg" disabled>상점에 등록하기 (+1P)</button></div>
   <div id="shopRank" style="display:none">
     <div class="chips" id="chips"><button data-f="all" class="on">전체</button><button data-f="onion">양파</button><button data-f="carrot">당근</button><button data-f="radish">무</button><button data-f="watermelon">수박</button></div>
     <ul class="rank" id="rankList"></ul></div>
@@ -729,7 +735,7 @@ const rScore=x=>x.s+(x.gold?15:0)+(x.rb?30:0)+(x.mut?MUT[x.mut].b:0);
 function itemDetail(it){if(!it)return '<p class="empty-note" style="margin:auto">칸을 눌러 채소 정보를 확인하세요</p>';
   return `${vegSVG(it.type,it.gold,it.mut,it.rb)}<div><b>${vname(it)}</b>${gradeTag(it.g)}${mutTag(it.mut)}<p>무게 ${it.w}g · 품질 ${it.s}점 · 최고 ${it.db}dB · 재배 ${it.t}초</p></div>`;}
 function slotsHTML(list,selId){let h='';for(let i=0;i<50;i++){const it=list[i];
-  h+=it?`<button class="slot${it.gold?' gold':''}${it.rb?' rbs':''}${it.id===selId?' on':''}" data-id="${it.id}" aria-label="${vname(it)} ${it.w}g">${vegSVG(it.type,it.gold,it.mut,it.rb)}<em>${it.w}g</em></button>`:'<span class="slot"></span>';}return h;}
+  const on=!!it&&(selId instanceof Set?selId.has(it.id):it.id===selId);h+=it?`<button class="slot${it.gold?' gold':''}${it.rb?' rbs':''}${on?' on':''}" data-id="${it.id}" aria-label="${vname(it)} ${it.w}g" aria-pressed="${on}">${vegSVG(it.type,it.gold,it.mut,it.rb)}<em>${it.w}g</em>${selId instanceof Set?'<i class="ck">✓</i>':''}</button>`:'<span class="slot"></span>';}return h;}
 function updateHUD(){$('#invN').textContent=inv.length;$('#best').textContent=Math.round(best);$('#ptsN').textContent=pts;}
 
 /* inventory */
@@ -738,11 +744,14 @@ function renderInv(){$('#invCount').textContent=inv.length+'/50';$('#invSlots').
 $('#invSlots').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(!b)return;invSel=+b.dataset.id;renderInv();});
 
 /* shop */
-let shopTab='reg',shopSel=null,rankF='all';
+let shopTab='reg',shopSel=new Set(),shopLast=null,rankF='all';
 function renderShop(){$$('#shopTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===shopTab));$('#shopReg').style.display=shopTab==='reg'?'block':'none';$('#shopRank').style.display=shopTab==='rank'?'block':'none';$('#shopSeed').style.display=shopTab==='seed'?'block':'none';
   if(shopTab==='seed'){const has=unlocked.watermelon;$('#shopSeed').innerHTML=`<p class="ptline" style="margin-top:12px">보유 포인트 <b>${pts}</b>P</p><div class="seedcard">${vegSVG('watermelon',false)}<div><b>허세 수박 씨앗</b><p>${VEG.watermelon.desc} 무게가 양파의 20배!</p>${has?'<span class="own">해금 완료 · 텃밭에서 심을 수 있어요</span>':`<button id="buyMelon" ${pts<100?'disabled':''}>100P로 해금</button>${pts<100?` <small>${100-pts}P 부족</small>`:''}`}</div></div>`;return;}
-  if(shopTab==='reg'){$('#shSlots').innerHTML=slotsHTML(inv,shopSel);const it=inv.find(i=>i.id===shopSel);
-    $('#shDetail').innerHTML=inv.length?itemDetail(it):'<p class="empty-note" style="margin:auto">가방이 비었어요. 수확한 채소를 가져오세요!</p>';$('#shReg').disabled=!it;}
+  if(shopTab==='reg'){shopSel.forEach(id=>{if(!inv.some(i=>i.id===id))shopSel.delete(id);});const n=shopSel.size;$('#shSlots').innerHTML=slotsHTML(inv,shopSel);
+    const it=inv.find(i=>i.id===shopLast&&shopSel.has(i.id));
+    $('#shDetail').innerHTML=!inv.length?'<p class="empty-note" style="margin:auto">가방이 비었어요. 수확한 채소를 가져오세요!</p>':n>1?`<div><b>${n}개 선택</b><p>총 ${inv.filter(i=>shopSel.has(i.id)).reduce((a,i)=>a+i.w,0)}g${it?' · 마지막으로 고른 채소: '+vname(it)+' '+it.w+'g':''}</p></div>`:itemDetail(it);
+    const all=inv.length>0&&n===inv.length;$('#shAll').textContent=all?'선택 해제':'전체 선택';$('#shAll').disabled=!inv.length;$('#shHint').textContent=n?n+'개 골랐어요':'칸을 눌러 여러 개를 골라요';
+    $('#shReg').disabled=!n;$('#shReg').textContent=n>1?`${n}개 한꺼번에 등록하기 (+${n}P)`:'상점에 등록하기 (+1P)';}
   else{$$('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.f===rankF));
     const netVeg=netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId&&VEG[r.data.type]).map(r=>({...r.data,who:r.name}));
     const all=[...netVeg,...shopList.map(x=>({...x,who:(nick||'나')+' (나)',me:true}))].filter(x=>rankF==='all'||x.type===rankF).map(x=>({...x,rs:rScore(x)})).sort((a,b)=>b.rs-a.rs);
@@ -750,9 +759,12 @@ function renderShop(){$$('#shopTabs button').forEach(b=>b.classList.toggle('on',
 $$('#shopTabs button').forEach(b=>b.addEventListener('click',()=>{shopTab=b.dataset.tab;renderShop();}));
 $('#shopSeed').addEventListener('click',e=>{if(!e.target.closest('#buyMelon'))return;if(pts<100||unlocked.watermelon){sfx.nope();return;}pts-=100;unlocked.watermelon=true;save();updateHUD();sfx.jingle();toast('허세 수박 씨앗 해금! 텃밭에서 심어보세요');renderShop();});
 $$('#chips button').forEach(b=>b.addEventListener('click',()=>{rankF=b.dataset.f;renderShop();}));
-$('#shSlots').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(!b)return;shopSel=+b.dataset.id;renderShop();});
-$('#shReg').addEventListener('click',()=>{const i=inv.findIndex(x=>x.id===shopSel);if(i<0)return;const it=inv.splice(i,1)[0];shopList.push(it);shopSel=null;pts+=1;save();updateHUD();sfx.coin();pushRecord('veg',rScore(it),{type:it.type,gold:it.gold,rb:it.rb,mut:it.mut,w:it.w,s:it.s,g:it.g});
-  const all=[...netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId).map(r=>r.data),...shopList].map(rScore).sort((a,b)=>b-a);toast(vname(it)+' 등록! 랭킹 '+(all.indexOf(rScore(it))+1)+'위 · +1P');rankF='all';shopTab='rank';renderShop();});
+$('#shSlots').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(!b)return;const id=+b.dataset.id;if(shopSel.has(id)){shopSel.delete(id);if(shopLast===id)shopLast=[...shopSel].pop()??null;}else{shopSel.add(id);shopLast=id;}renderShop();});
+$('#shAll').addEventListener('click',()=>{if(inv.length&&shopSel.size===inv.length){shopSel.clear();shopLast=null;}else{inv.forEach(i=>shopSel.add(i.id));shopLast=inv.length?inv[inv.length-1].id:null;}renderShop();});
+$('#shReg').addEventListener('click',()=>{const its=inv.filter(x=>shopSel.has(x.id));if(!its.length)return;inv=inv.filter(x=>!shopSel.has(x.id));shopList.push(...its);shopSel.clear();shopLast=null;pts+=its.length;save();updateHUD();sfx.coin();
+  pushRecords(its.map(it=>({kind:'veg',score:rScore(it),data:{type:it.type,gold:it.gold,rb:it.rb,mut:it.mut,w:it.w,s:it.s,g:it.g}})));
+  const all=[...netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId).map(r=>r.data),...shopList].map(rScore).sort((a,b)=>b-a);const top=its.reduce((a,b)=>rScore(b)>rScore(a)?b:a);
+  toast(its.length>1?`${its.length}개 등록! ${vname(top)} 랭킹 ${all.indexOf(rScore(top))+1}위 · +${its.length}P`:vname(top)+' 등록! 랭킹 '+(all.indexOf(rScore(top))+1)+'위 · +1P');rankF='all';shopTab='rank';renderShop();});
 function renderBoard(){$('#dbList').innerHTML=dbRanking().slice(0,30).map((r,i)=>`<li class="${r.me?'me':''}"><span class="no">${i+1}</span>${vegSVG('onion',i===0)}<span class="nm">${esc(r.n)}<small>${r.me?'내 기록':'온라인 농부'}</small></span><span class="sc">${r.b} dB</span></li>`).join('');}
 
 /* dex + titles */
@@ -1061,6 +1073,7 @@ function applyState(d){if(!d||typeof d!=='object')return;const A=Array.isArray;i
 async function cloudSave(){if(!sb||!nick)return;cloudDirty=false;try{const {error}=await sb.rpc('bo_save',{p_code:saveCode,p_data:stateSnapshot()});if(error)throw error;}catch(e){cloudDirty=true;cloudT=30;}}
 async function cloudLoadOwn(){if(!sb)return;try{const {data,error}=await sb.rpc('bo_load',{p_code:saveCode});if(error||!data)return;if((+data.savedAt||0)>(store.get('savedAt',0)+2000)){applyState(data);toast('서버에 저장된 진행 상황을 불러왔어요');}}catch(e){}}
 async function fetchRecords(){if(!sb)return;try{const {data,error}=await sb.from('bo_records').select('name,kind,score,data').order('score',{ascending:false}).limit(300);if(error)throw error;netRecs=data||[];drawRank();if(ui==='board')renderBoard();if(ui==='shop'&&shopTab==='rank')renderShop();}catch(e){}}
+async function pushRecords(list){if(!sb||!nick||!list.length)return;try{await sb.from('bo_records').insert(list.map(r=>({name:nick,kind:r.kind,score:Math.round(r.score),data:{...r.data,uid:myId}})));fetchRecords();}catch(e){}}
 async function pushRecord(kind,score,data){if(!sb||!nick)return;try{await sb.from('bo_records').insert({name:nick,kind,score:Math.round(score),data:{...data,uid:myId}});fetchRecords();}catch(e){}}
 function netTick(dt){
   emoCd-=dt;myEmoT-=dt;place(myEmo,P.pos.x,3.5,P.pos.z,myEmoT>0&&!ui);
