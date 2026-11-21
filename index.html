@@ -296,7 +296,7 @@ body:not(.play) #joy{display:none}
 </div>
 <div id="event"><b id="evName"></b><span id="evDesc"></span><div class="bar"><i id="evBar"></i></div></div>
 <div id="prompt"></div>
-<div id="help" class="play-only">WASD 이동 · 클릭 이동 · E 상호작용 · I 가방 · K 도감 · Space 꾹 소리 지르기 · Q 꾹 살살</div>
+<div id="help" class="play-only">WASD 이동 · 클릭 이동 · 드래그 화면 회전 · 휠 줌 · E 상호작용 · I 가방 · K 도감 · Space 꾹 소리 지르기 · Q 꾹 살살</div>
 
 <div id="panel" role="region" aria-label="채소 키우기">
   <div class="top"><span id="pName"></span><span id="pPct">0%</span></div>
@@ -337,7 +337,7 @@ body:not(.play) #joy{display:none}
 
 <div id="board" class="layer"><div class="card">
   <button class="x" data-close>닫기</button><h2>최고 기록 게시판</h2>
-  <p style="margin:4px 0 8px;font-size:15px">이번 주 가장 크게 소리친 농부들</p><ul class="rank" id="dbList"></ul></div></div>
+  <p style="margin:4px 0 8px;font-size:15px">나쁜말 양파 농부들의 최고 데시벨</p><ul class="rank" id="dbList"></ul></div></div>
 
 <div id="dex" class="layer"><div class="card">
   <button class="x" data-close>닫기</button><h2>채소 도감 <span class="prog" id="dexProg"></span></h2>
@@ -390,12 +390,13 @@ const EVENTS=[
   {id:'golden',n:'황금 시간',d:'수확하면 황금 채소 확률 2배!',c:'#c98a1e'}];
 const HATS=[{id:'straw',n:'밀짚모자'},{id:'cap',n:'볼캡'},{id:'propeller',n:'프로펠러 무지개 모자'},{id:'bald',n:'대머리'},{id:'halo',n:'천사링'}];
 const OUTFITS=[{id:'farmer',n:'농부 의상'},{id:'cowboy',n:'카우보이 의상'},{id:'school',n:'교복'},{id:'muscle',n:'반바지'},{id:'priest',n:'성직자 의상'}];
-const ZONES=[{n:'나의 텃밭',x:0,z:-14,r:8},{n:'지우네 텃밭',x:-24,z:0,r:7},{n:'도윤네 텃밭',x:24,z:0,r:7},{n:'수확 광장',x:0,z:20,r:14}];
-const MILLS=[[-31,-16,.45],[31,-13,-.45],[-12,-33,.15]];
-const FRIENDS=[{n:'지우',b:104},{n:'도윤',b:91},{n:'하람',b:87}];
-const NPC_SHOP=[{who:'지우',type:'onion',gold:true,w:402,s:88,g:'전설'},{who:'도윤',type:'onion',gold:false,mut:'전기',w:350,s:70,g:'특대'},{who:'도윤',type:'radish',gold:false,w:1310,s:72,g:'특대'},{who:'하람',type:'carrot',gold:false,mut:'달빛',w:198,s:58,g:'대'},{who:'지우',type:'carrot',gold:false,w:170,s:55,g:'대'},{who:'도윤',type:'onion',gold:false,w:236,s:47,g:'대'}];
-const PLOTPOS=[[0,-13],[-3.4,-13],[3.4,-13],[-3.4,-16.6],[0,-16.6],[3.4,-16.6]];
-const GSIZE=[{n:1,cx:0,cz:-13,w:4.4,d:4.4,gap:.9,cost:0},{n:3,cx:0,cz:-13,w:12,d:4.8,gap:1.8,cost:30},{n:6,cx:0,cz:-14.8,w:12,d:8.6,gap:1.8,cost:100}];
+// 텃밭 자리 6곳: 동시 접속하면 각자 다른 자리에 자기 텃밭이 생김
+const SLOTS=[[0,-13],[-24,-2],[24,-2],[-20,-24],[20,-24],[0,-33]];
+const ZONES=[...SLOTS.map(([x,z],i)=>({n:'텃밭',slot:i,x,z:z-1.8,r:8})),{n:'수확 광장',x:0,z:20,r:14}];
+const MILLS=[[-36,-8,.6],[36,-8,-.6],[-31,24,.9]];
+const PLOTOFF=[[0,0],[-3.4,0],[3.4,0],[-3.4,-3.6],[0,-3.6],[3.4,-3.6]];
+const GSIZE=[{n:1,dz:0,w:4.4,d:4.4,gap:.9,cost:0},{n:3,dz:0,w:12,d:4.8,gap:1.8,cost:30},{n:6,dz:-1.8,w:12,d:8.6,gap:1.8,cost:100}];
+let mySlot=0;const slotSigns=[];
 const FENCES=[{id:'wood',n:'기본 나무',p:0,css:'#b07d4a'},{id:'red',n:'빨강',c:0xe2452f,p:10},{id:'orange',n:'주황',c:0xf28c28,p:10},{id:'yellow',n:'노랑',c:0xf2d13a,p:10},{id:'green',n:'초록',c:0x4fae45,p:10},{id:'blue',n:'파랑',c:0x3f7fe0,p:10},{id:'purple',n:'보라',c:0x8a5bd6,p:10},{id:'black',n:'검정',c:0x2a2a2a,p:10},{id:'white',n:'흰색',c:0xf4f4f4,p:10},
   {id:'gold',n:'금색',c:0xe0b030,p:50,shine:1,css:'linear-gradient(135deg,#fff3b0,#e0b030 55%,#8a5a10)'},{id:'silver',n:'은색',c:0xc9ced8,p:50,shine:1,css:'linear-gradient(135deg,#ffffff,#c9ced8 55%,#6f7682)'},{id:'neon',n:'형광',c:0x9dff3a,p:50,neon:1,css:'#9dff3a'}];
 const KN={onion:'양파',carrot:'당근',radish:'무',watermelon:'수박'};
@@ -557,7 +558,7 @@ const plots=[],trees=[],clouds=[],parts=[],flying=[],npcs=[],mills=[],animals=[]
 const P={c:null,pos:new V3(0,0,27),target:null,pending:null,walk:0};
 let mode='menu',ui=null,active=null,sel=null,near=null,levelS=0,dbS=35,micOn=false,analyser=null,buf=null;
 let holdLoud=false,holdSoft=false,flashT=0,toastT=0,resT=0,time=0,menuT=0,lastRank=-1;
-let event=null,evT=0,nextEv=40,lastEv=null,shoutA=0,ringT=0,shoutTxtT=0;const rings=[],SHOUTS=['으아아악!!','크아아아!!','야!!!!!','와아아악!!','덤벼라!!'];let ringGeo=null;
+let camYaw=0,camDist=1;let event=null,evT=0,nextEv=40,lastEv=null,shoutA=0,ringT=0,shoutTxtT=0;const rings=[],SHOUTS=['으아아악!!','크아아아!!','야!!!!!','와아아악!!','덤벼라!!'];let ringGeo=null;
 const keys={},joy={x:0,y:0};
 const SKY0=new THREE.Color(0x9fd3f0),SKY1=new THREE.Color(0x4a3f5c),CL0=new THREE.Color(0xffffff),CL1=new THREE.Color(0x77708a);
 const skyBase=SKY0.clone(),EVSKY={storm:0x6a6480,night:0x1b2340,rain:0x8aa3b8,golden:0xf2b46a},EVL={none:[.85,.5],storm:[.45,.38],night:[.14,.24],rain:[.5,.42],golden:[.95,.55]};
@@ -616,21 +617,15 @@ function initWorld(){
   Object.assign(sun.shadow.camera,{left:-46,right:46,top:46,bottom:-46,far:100});scene.add(sun);
   const water=new THREE.Mesh(new THREE.PlaneGeometry(500,500),M(0x5fb4e0));water.rotation.x=-Math.PI/2;water.position.y=-.7;scene.add(water);
   mk(Cy(42,43,1.3,40),0x4f9a3a,0,-.65,0);mk(Cy(43.2,45,1.8,40),0x9c6b3e,0,-1.2,0);
-  path(0,8,0,-8,3);path(-8,11,-21,4,2.6);path(8,11,21,4,2.6);
+  path(0,8,0,-8,3);path(-8,11,-23,4,2.6);path(8,11,23,4,2.6);
   moon=new THREE.Mesh(Sp(5,16,12),BM(0xf4f1d0));moon.position.set(-35,48,-95);moon.visible=false;scene.add(moon);
 
   // my garden (확장형)
-  PLOTPOS.forEach(([x,z])=>{const m=mk(B(2.4,.3,2.2),0x7a4b2a,x,.15,z,false);for(let k=-1;k<=1;k++)mk(B(2.2,.06,.18),0x5e3a20,0,.16,k*.6,m);
+  SLOTS.forEach(([x,z],i)=>{const sg=sign(['빈 텃밭 터'],x-4.4,z+4.8,0,2.6);slotSigns[i]=sg;});
+  PLOTOFF.forEach(([ox,oz])=>{const x=SLOTS[0][0]+ox,z=SLOTS[0][1]+oz,m=mk(B(2.4,.3,2.2),0x7a4b2a,x,.15,z,false);for(let k=-1;k<=1;k++)mk(B(2.2,.06,.18),0x5e3a20,0,.16,k*.6,m);
     const p={x,z,mesh:m,veg:null,growth:0,v:null,b:bubble(),bt:0,lt:0,state:'',ring:null,t0:0,tR:0,maxDb:0,mut:null,aura:null,ev:{},unlocked:false};m.userData.plot=p;plots.push(p);});
   buildGarden(false);
-  gardenSign=sign(['나의 텃밭','E: 텃밭 꾸미기'],-4.4,-8.2,0,3);gardenSign.userData.kind='garden';gardenSpot=new V3(-4.4,0,-6.6);
-
-  // friends
-  [[-24,0,'지우네 텃밭',['onion','onion','carrot','radish'],{hat:1,outfit:2},['어제 양파한테 세 시간 소리 질렀어','목은 쉬었는데 양파는 컸다','번개 맞은 양파 봤어? 전기 양파래','황금 양파 상점에 올렸지롱']],
-   [24,0,'도윤네 텃밭',['radish','radish','onion','carrot'],{hat:0,outfit:1},['내 무는 뭘 해도 무덤덤해','데시벨 랭킹 1등 노리는 중','고요한 밤엔 속삭여야 돼','포인트 모아서 울타리 금색으로 바꿀 거야']]].forEach(([cx,cz,name,vs,lk,lines])=>{
-    fence(cx,cz,9,7,1.6);sign([name],cx-2.6,cz+4.2,0,2.6);
-    vs.forEach((t,i)=>{const x=cx+(i%2?1.6:-1.6),z=cz-1.2+Math.floor(i/2)*2.6;mk(B(2,.3,1.8),0x7a4b2a,x,.15,z);const v=makeVeg(t);v.g.position.set(x,.3,z);v.g.scale.setScalar(.8+Math.random()*.35);scene.add(v.g);});
-    const n=makeChar(lk);n.g.position.set(cx+3.2*-Math.sign(cx),0,cz+1.6);npcs.push({...n,lines,b:bubble('npc'),t:0,name:name.replace('네 텃밭','')});});
+  gardenSign=sign(['나의 텃밭','E: 텃밭 꾸미기'],SLOTS[0][0]-4.4,SLOTS[0][1]+4.8,0,3);gardenSign.userData.kind='garden';gardenSpot=new V3(SLOTS[0][0]-4.4,0,SLOTS[0][1]+6.4);updSlotSigns();
 
   // plaza
   mk(Cy(13.5,13.5,.1,48),0xb9ad95,0,.05,20);mk(Cy(13.8,13.8,.06,48),0x9c8f76,0,.03,20);
@@ -674,17 +669,21 @@ function initWorld(){
   titleTag=document.createElement('div');titleTag.className='ntag me';$('#bubbles').appendChild(titleTag);
   buildPlayer();addEventListener('resize',resize);resize();
 }
-function buildGarden(fx){const G=GSIZE[gLevel];if(gardenFence)scene.remove(gardenFence);gardenFence=new THREE.Group();scene.add(gardenFence);fence(G.cx,G.cz,G.w,G.d,G.gap,fenceMats(fenceC),gardenFence);
+function buildGarden(fx){const G=GSIZE[gLevel],[sx,sz]=SLOTS[mySlot];if(gardenFence)scene.remove(gardenFence);gardenFence=new THREE.Group();scene.add(gardenFence);fence(sx,sz+G.dz,G.w,G.d,G.gap,fenceMats(fenceC),gardenFence);
   plots.forEach((p,i)=>{const on=i<G.n;if(on&&!p.unlocked){p.unlocked=true;scene.add(p.mesh);if(fx)burst(p.x,.5,p.z,0x7a4b2a,18);}
     if(!on&&p.unlocked){p.unlocked=false;scene.remove(p.mesh);if(p.v){scene.remove(p.v.g);p.v=null;p.veg=null;}if(p.ring){scene.remove(p.ring);p.ring=null;}}});}
+function moveGarden(ns){if(ns===mySlot)return;const [ax,az]=SLOTS[mySlot],[bx,bz]=SLOTS[ns],dx=bx-ax,dz=bz-az;
+  plots.forEach(p=>{p.x+=dx;p.z+=dz;p.mesh.position.x+=dx;p.mesh.position.z+=dz;if(p.v){p.v.g.position.x+=dx;p.v.g.position.z+=dz;}if(p.ring){p.ring.position.x+=dx;p.ring.position.z+=dz;}});
+  mySlot=ns;buildGarden(false);gardenSign.position.set(bx-4.4,0,bz+4.8);gardenSpot.set(bx-4.4,0,bz+6.4);updSlotSigns();toast('내 텃밭 자리가 정해졌어요: '+(ns+1)+'번 터');}
+function updSlotSigns(){slotSigns.forEach((sg,i)=>{let used=i===mySlot;remotes.forEach(r=>{if(r.slot===i)used=true;});sg.visible=!used;});}
 function buildPlayer(){const rot=P.c?P.c.g.rotation.y:Math.PI;if(P.c)scene.remove(P.c.g);P.c=makeChar(look);P.c.g.position.copy(P.pos);P.c.g.rotation.y=rot;}
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?62:50;camera.updateProjectionMatrix();}
 function drawRank(){const cv=rankTex.image,g=cv.getContext('2d'),W=512,H=384;g.fillStyle='#2f5a2a';g.fillRect(0,0,W,H);g.strokeStyle='#c79a63';g.lineWidth=16;g.strokeRect(0,0,W,H);
   g.fillStyle='#fff8ec';g.textAlign='center';g.textBaseline='middle';g.font='44px Jua, sans-serif';g.fillText('최고 기록 게시판',W/2,56);
   g.font='38px Jua, sans-serif';dbTop().forEach((r,i)=>{const y=132+i*60;g.fillStyle=r.me?'#ffd54a':'#fff8ec';g.textAlign='left';g.fillText((r.rank||i+1)+'.  '+r.n.slice(0,9),60,y);g.textAlign='right';g.fillText(r.b+' dB',W-60,y);});rankTex.needsUpdate=true;}
 function dbRanking(){const by={};netRecs.filter(r=>r.kind==='db'&&r.data&&r.data.uid!==myId).forEach(r=>{const u=r.data.uid;if(!by[u]||by[u].b<r.score)by[u]={n:r.name,b:r.score,net:1};});
-  return [...FRIENDS.map(f=>({n:f.n,b:f.b})),...Object.values(by),{n:(nick||'나')+' (나)',b:Math.round(best),me:true}].sort((a,b)=>b.b-a.b);}
-function dbTop(){const l=dbRanking(),top=l.slice(0,4);if(!top.some(r=>r.me)){const mi=l.findIndex(r=>r.me);top[3]={...l[mi],rank:mi+1};}return top;}
+  return [...Object.values(by),{n:(nick||'나')+' (나)',b:Math.round(best),me:true}].sort((a,b)=>b.b-a.b);}
+function dbTop(){const l=dbRanking(),top=l.slice(0,4);if(!top.some(r=>r.me)){const mi=l.findIndex(r=>r.me);top[Math.min(3,top.length)]={...l[mi],rank:mi+1};}return top;}
 
 /* ================= ui helpers ================= */
 function bubble(cls){const d=document.createElement('div');d.className='bubble'+(cls?' '+cls:'');$('#bubbles').appendChild(d);return d;}
@@ -719,15 +718,15 @@ function renderShop(){$$('#shopTabs button').forEach(b=>b.classList.toggle('on',
     $('#shDetail').innerHTML=inv.length?itemDetail(it):'<p class="empty-note" style="margin:auto">가방이 비었어요. 수확한 채소를 가져오세요!</p>';$('#shReg').disabled=!it;}
   else{$$('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.f===rankF));
     const netVeg=netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId&&VEG[r.data.type]).map(r=>({...r.data,who:r.name}));
-    const all=[...NPC_SHOP.map(x=>({...x})),...netVeg,...shopList.map(x=>({...x,who:(nick||'나')+' (나)',me:true}))].filter(x=>rankF==='all'||x.type===rankF).map(x=>({...x,rs:rScore(x)})).sort((a,b)=>b.rs-a.rs);
+    const all=[...netVeg,...shopList.map(x=>({...x,who:(nick||'나')+' (나)',me:true}))].filter(x=>rankF==='all'||x.type===rankF).map(x=>({...x,rs:rScore(x)})).sort((a,b)=>b.rs-a.rs);
     $('#rankList').innerHTML=all.length?all.map((x,i)=>`<li class="${x.me?'me':''}"><span class="no">${i+1}</span>${vegSVG(x.type,x.gold,x.mut,x.rb)}<span class="nm">${vname(x)} ${gradeTag(x.g)}<small>${esc(x.who)} · ${x.w}g</small></span><span class="sc">${x.rs}점<small>${[x.rb?'무지개 +30':'',x.gold?'황금 +15':'',x.mut?x.mut+' +'+MUT[x.mut].b:''].filter(Boolean).join(' · ')||'품질 점수'}</small></span></li>`).join(''):'<li class="empty-note">등록된 채소가 없어요</li>';}}
 $$('#shopTabs button').forEach(b=>b.addEventListener('click',()=>{shopTab=b.dataset.tab;renderShop();}));
 $('#shopSeed').addEventListener('click',e=>{if(!e.target.closest('#buyMelon'))return;if(pts<100||unlocked.watermelon){sfx.nope();return;}pts-=100;unlocked.watermelon=true;save();updateHUD();sfx.jingle();toast('허세 수박 씨앗 해금! 텃밭에서 심어보세요');renderShop();});
 $$('#chips button').forEach(b=>b.addEventListener('click',()=>{rankF=b.dataset.f;renderShop();}));
 $('#shSlots').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(!b)return;shopSel=+b.dataset.id;renderShop();});
 $('#shReg').addEventListener('click',()=>{const i=inv.findIndex(x=>x.id===shopSel);if(i<0)return;const it=inv.splice(i,1)[0];shopList.push(it);shopSel=null;pts+=1;save();updateHUD();sfx.coin();pushRecord('veg',rScore(it),{type:it.type,gold:it.gold,rb:it.rb,mut:it.mut,w:it.w,s:it.s,g:it.g});
-  const all=[...NPC_SHOP,...netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId).map(r=>r.data),...shopList].map(rScore).sort((a,b)=>b-a);toast(vname(it)+' 등록! 랭킹 '+(all.indexOf(rScore(it))+1)+'위 · +1P');rankF='all';shopTab='rank';renderShop();});
-function renderBoard(){$('#dbList').innerHTML=dbRanking().slice(0,30).map((r,i)=>`<li class="${r.me?'me':''}"><span class="no">${i+1}</span>${vegSVG('onion',i===0)}<span class="nm">${esc(r.n)}<small>${r.me?'내 기록':r.net?'온라인 농부':'이웃 농부'}</small></span><span class="sc">${r.b} dB</span></li>`).join('');}
+  const all=[...netRecs.filter(r=>r.kind==='veg'&&r.data&&r.data.uid!==myId).map(r=>r.data),...shopList].map(rScore).sort((a,b)=>b-a);toast(vname(it)+' 등록! 랭킹 '+(all.indexOf(rScore(it))+1)+'위 · +1P');rankF='all';shopTab='rank';renderShop();});
+function renderBoard(){$('#dbList').innerHTML=dbRanking().slice(0,30).map((r,i)=>`<li class="${r.me?'me':''}"><span class="no">${i+1}</span>${vegSVG('onion',i===0)}<span class="nm">${esc(r.n)}<small>${r.me?'내 기록':'온라인 농부'}</small></span><span class="sc">${r.b} dB</span></li>`).join('');}
 
 /* dex + titles */
 let dexTab='book';
@@ -919,7 +918,7 @@ function update(dt){
 }
 function updatePlay(dt,L){
   const C=P.c;let mx=0,mz=0;
-  if(!ui){if(keys.KeyW||keys.ArrowUp)mz-=1;if(keys.KeyS||keys.ArrowDown)mz+=1;if(keys.KeyA||keys.ArrowLeft)mx-=1;if(keys.KeyD||keys.ArrowRight)mx+=1;mx+=joy.x;mz+=joy.y;
+  if(!ui){if(keys.KeyW||keys.ArrowUp)mz-=1;if(keys.KeyS||keys.ArrowDown)mz+=1;if(keys.KeyA||keys.ArrowLeft)mx-=1;if(keys.KeyD||keys.ArrowRight)mx+=1;mx+=joy.x;mz+=joy.y;if(mx||mz){const c=Math.cos(camYaw),sn=Math.sin(camYaw),wx=mx*c+mz*sn,wz=-mx*sn+mz*c;mx=wx;mz=wz;}
     if(mx||mz){P.target=null;P.pending=null;}
     else if(P.target){const dx=P.target.x-P.pos.x,dz=P.target.z-P.pos.z,d=Math.hypot(dx,dz);if(d<.25){P.target=null;if(P.pending){const f=P.pending;P.pending=null;f();}}else{mx=dx/d;mz=dz/d;}}}
   const mag=Math.hypot(mx,mz);
@@ -947,8 +946,8 @@ function updatePlay(dt,L){
     place(n.b,n.g.position.x,2.7,n.g.position.z,d<6&&!ui);});
   // 소리 지르기 연출: 나와 채소를 잡는 줌인 + 음파 + 집중선 + 의성어
   const tgt=(active&&active.veg&&!ui&&L>.42)?clamp((L-.3)/.55,0,1):0;shoutA+=(tgt-shoutA)*Math.min(1,dt*(tgt>shoutA?6:2.2));const e=shoutA*shoutA*(3-2*shoutA);
-  const camT=new V3(P.pos.x,10,P.pos.z+12.5),look=new V3(P.pos.x,1,P.pos.z-1);
-  if(active&&e>.001){const mx2=(P.pos.x+active.x)/2,mz2=(P.pos.z+active.z)/2;camT.lerp(new V3(mx2-2.6,2.4,mz2+5),e);look.lerp(new V3(mx2,1.05,mz2),e);}
+  const cy=Math.cos(camYaw),sy=Math.sin(camYaw),camT=new V3(P.pos.x+12.5*camDist*sy,10*camDist,P.pos.z+12.5*camDist*cy),look=new V3(P.pos.x-sy,1,P.pos.z-cy);
+  if(active&&e>.001){const mx2=(P.pos.x+active.x)/2,mz2=(P.pos.z+active.z)/2;camT.lerp(new V3(mx2-2.6*cy+5*sy,2.4,mz2+2.6*sy+5*cy),e);look.lerp(new V3(mx2,1.05,mz2),e);}
   camera.position.lerp(camT,1-Math.exp(-dt*6));
   const sh=set.fx?(.1*e+(L>.72?(L-.72)*.5:0)):0;camera.position.x+=(Math.random()-.5)*sh;camera.position.y+=(Math.random()-.5)*sh;camera.lookAt(look);
   camera.fov=(innerWidth<innerHeight?62:50)-e*10;camera.updateProjectionMatrix();
@@ -956,7 +955,7 @@ function updatePlay(dt,L){
   for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.t+=dt/.55;r.m.position.lerpVectors(r.from,r.to,Math.min(1,r.t));r.m.scale.setScalar(.4+r.t*2.2);r.m.material.opacity=.9*(1-r.t);if(r.t>=1){scene.remove(r.m);r.m.material.dispose();rings.splice(i,1);}}
   const fo=$('#focus');fo.style.opacity=set.fx?e*.85:0;fo.style.transform=`rotate(${Math.random()*4}deg)`;
   const stx=$('#shoutTxt');if(e>.35){shoutTxtT-=dt;if(shoutTxtT<=0){shoutTxtT=1.1;stx.textContent=pick(SHOUTS);}place(stx,P.pos.x,2.3,P.pos.z,true);if(parseFloat(stx.style.top)<150)stx.style.top='150px';stx.style.transform=`translate(-50%,-100%) rotate(${-8+Math.sin(now*20)*3}deg) scale(${.7+e*.5+Math.sin(now*25)*.05})`;}else{stx.style.display='none';shoutTxtT=0;}
-  let z='초록 들판';ZONES.forEach(q=>{if(Math.hypot(P.pos.x-q.x,P.pos.z-q.z)<q.r)z=q.n;});$('#zone').textContent=z;
+  let z='초록 들판';ZONES.forEach(q=>{if(Math.hypot(P.pos.x-q.x,P.pos.z-q.z)<q.r){if(q.slot==null)z=q.n;else if(q.slot===mySlot)z='나의 텃밭';else{let o=null;remotes.forEach(r=>{if(r.slot===q.slot)o=r.name;});z=o?o+'의 텃밭':'빈 텃밭 터';}}});$('#zone').textContent=z;
   const pr=$('#prompt'),pn=$('#panel');
   if(!ui&&active&&active.veg){pn.style.display='block';pr.style.display='none';const V=VEG[active.veg];
     const sp=spotOfVeg(active.veg),night=event&&event.id==='night';$('#pName').innerHTML=V.name+mutTag(active.mut);$('#pDesc').textContent=night?'고요한 밤: 모든 채소의 스위트 스팟이 속삭임(48~62dB)으로 바뀌었어요.':V.desc;$('#pPct').textContent=Math.floor(active.growth*100)+'%';$('#gBar').style.width=(active.growth*100)+'%';
@@ -971,29 +970,43 @@ let last=0;function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t
 /* ================= multiplayer (Supabase Realtime) ================= */
 const SB_URL='https://awuhhfuvaxsmpizlrjns.supabase.co',SB_KEY='sb_publishable_-c9WVX0uCqmj2uzUyoJtOA_EOd4F5hT';
 const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let sb=null,chan=null,online=false,netCount=1,netRecs=[],sendT=0,bestDirty=false,bestT=0,lastSent='',joining=false;
+let joinT=Date.now(),slotChecked=false,gdT=0,lastGd='';let sb=null,chan=null,online=false,netCount=1,netRecs=[],sendT=0,bestDirty=false,bestT=0,lastSent='',joining=false;
 const remotes=new Map();
 function updNet(){const e=$('#net');if(online){e.textContent='● 접속 '+netCount+'명';e.className='pill on';}else{e.textContent=sb?'연결 중...':'오프라인';e.className='pill off';}}
 function safeLook(l){l=l||{};return {hat:clamp(l.hat|0,0,HATS.length-1),outfit:clamp(l.outfit|0,0,OUTFITS.length-1)};}
 function getRemote(id,meta){let r=remotes.get(id);if(!r){r={id,name:'농부',look:{hat:0,outfit:0},title:'',pos:new V3(0,0,27),tgt:new V3(0,0,27),ry:0,mv:0,sh:0,tx:'',fx:null,fz:null,walk:0,last:performance.now(),ringT:0,
-    tag:document.createElement('div'),stx:document.createElement('div'),c:null};r.tag.className='ntag';r.stx.className='rshout';$('#bubbles').appendChild(r.tag);$('#bubbles').appendChild(r.stx);remotes.set(id,r);r.c=makeChar(r.look);}
+    tag:document.createElement('div'),stx:document.createElement('div'),c:null,slot:null,gd:null,G:null};r.tag.className='ntag';r.stx.className='rshout';$('#bubbles').appendChild(r.tag);$('#bubbles').appendChild(r.stx);remotes.set(id,r);r.c=makeChar(r.look);}
   if(meta){const nl=safeLook(meta.look);if(nl.hat!==r.look.hat||nl.outfit!==r.look.outfit){r.look=nl;const ry=r.c.g.rotation.y;scene.remove(r.c.g);r.c=makeChar(nl);r.c.g.rotation.y=ry;}
-    r.name=String(meta.name||'농부').slice(0,10);r.title=String(meta.title||'').slice(0,12);r.tag.innerHTML=(r.title?`<i>${esc(r.title)}</i>`:'')+`<b>${esc(r.name)}</b>`;}
+    r.name=String(meta.name||'농부').slice(0,10);r.title=String(meta.title||'').slice(0,12);const ns=Number.isInteger(meta.slot)&&meta.slot>=0&&meta.slot<SLOTS.length?meta.slot:null;if(ns!==r.slot){r.slot=ns;buildRemoteGarden(r);updSlotSigns();}r.tag.innerHTML=(r.title?`<i>${esc(r.title)}</i>`:'')+`<b>${esc(r.name)}</b>`;}
   return r;}
-function removeRemote(id){const r=remotes.get(id);if(!r)return;scene.remove(r.c.g);r.tag.remove();r.stx.remove();remotes.delete(id);}
+function removeRemote(id){const r=remotes.get(id);if(!r)return;scene.remove(r.c.g);if(r.G)scene.remove(r.G.group);r.tag.remove();r.stx.remove();remotes.delete(id);updSlotSigns();}
+function buildRemoteGarden(r){if(r.slot==null||!r.gd)return;const pl=Array.isArray(r.gd.pl)?r.gd.pl.slice(0,6):[],lv=clamp(r.gd.lv|0,0,2),fc=FENCES.some(f=>f.id===r.gd.fc)?r.gd.fc:'wood';
+  const key=[r.slot,lv,fc,r.name,pl.map(x=>x?x[0]+(x[2]||''):'-').join(',')].join('|');
+  if(!r.G||r.G.key!==key){if(r.G)scene.remove(r.G.group);const [sx,sz]=SLOTS[r.slot],G=GSIZE[lv],group=new THREE.Group();scene.add(group);fence(sx,sz+G.dz,G.w,G.d,G.gap,fenceMats(fc),group);const vegs=[];
+    for(let i=0;i<G.n;i++){const [ox,oz]=PLOTOFF[i];mk(B(2.4,.3,2.2),0x7a4b2a,sx+ox,.15,sz+oz,group);const it=pl[i];vegs[i]=null;
+      if(it&&VEG[it[0]]){const v=makeVeg(it[0],false);v.g.position.set(sx+ox,.3,sz+oz);if(it[2]&&MUT[it[2]])v.g.add(makeAura(it[2]));group.add(v.g);vegs[i]=v;}}
+    const sg=sign([r.name.slice(0,7)+'의 텃밭'],sx-4.4,sz+4.8,0,3);group.add(sg);r.G={group,key,vegs};updSlotSigns();}
+  r.G.vegs.forEach((v,i)=>{if(v&&pl[i])v.g.scale.setScalar(.22+clamp((+pl[i][1]||0)/100,0,1)*1.05);});}
+function gardenPayload(){return {id:tabId,slot:mySlot,lv:gLevel,fc:fenceC,pl:plots.filter(p=>p.unlocked).map(p=>p.veg?[p.veg,Math.round(p.growth*100),p.mut||0]:0)};}
+function resolveSlot(){if(!chan)return;const st=chan.presenceState(),mine=st[tabId]&&st[tabId][0];const myT=mine?mine.t:joinT;const taken=new Set();let conflict=false;
+  Object.keys(st).forEach(id=>{if(id===tabId)return;const m=st[id]&&st[id][0];if(!m||m.slot==null)return;taken.add(m.slot);if(m.slot===mySlot&&(m.t<myT||(m.t===myT&&id<tabId)))conflict=true;});
+  if(conflict||!slotChecked){slotChecked=true;if(conflict||taken.has(mySlot)){let pref=store.get('slot',0),ns=!taken.has(pref)?pref:-1;if(ns<0)for(let i=0;i<SLOTS.length;i++)if(!taken.has(i)){ns=i;break;}
+      if(ns>=0&&ns!==mySlot){moveGarden(ns);store.set('slot',ns);netTrack();}}}}
 function netInit(){if(sb||!window.supabase)return updNet();
   try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false},realtime:{params:{eventsPerSecond:20}}});}catch(e){sb=null;}updNet();fetchRecords();}
 function netJoin(){netInit();if(!sb)return;if(chan){netTrack();return;}if(joining)return;joining=true;
   try{chan=sb.channel('bad-onion-world',{config:{presence:{key:tabId},broadcast:{self:false}}});
     chan.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||p.id===tabId)return;const r=getRemote(p.id);r.tgt.set(+p.x||0,0,+p.z||0);r.ry=+p.ry||0;r.mv=p.mv?1:0;r.sh=clamp(+p.sh||0,0,1);r.tx=String(p.tx||'').slice(0,12);r.fx=p.fx;r.fz=p.fz;r.last=performance.now();})
+      .on('broadcast',{event:'gd'},({payload:g})=>{if(!g||g.id===tabId)return;const r=getRemote(g.id);r.gd=g;if(Number.isInteger(g.slot)&&r.slot==null)r.slot=clamp(g.slot,0,SLOTS.length-1);buildRemoteGarden(r);})
       .on('presence',{event:'sync'},()=>{const st=chan.presenceState(),ids=Object.keys(st);netCount=Math.max(1,ids.length);ids.forEach(id=>{if(id!==tabId&&st[id]&&st[id][0])getRemote(id,st[id][0]);});
-        [...remotes.keys()].forEach(id=>{if(!st[id])removeRemote(id);});updNet();})
+        [...remotes.keys()].forEach(id=>{if(!st[id])removeRemote(id);});resolveSlot();lastGd='';updNet();})
       .subscribe(status=>{joining=false;if(status==='SUBSCRIBED'){online=true;netTrack();toast('온라인 월드에 접속했어요!');}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){online=false;}updNet();});
   }catch(e){joining=false;online=false;updNet();}}
-function netTrack(){if(chan&&online&&mode==='play')chan.track({name:nick||'농부',look,title:title?(TITLES.find(T=>T.id===title)||{}).n:''}).catch(()=>{});}
+function netTrack(){if(chan&&online&&mode==='play')chan.track({name:nick||'농부',look,slot:mySlot,t:joinT,title:title?(TITLES.find(T=>T.id===title)||{}).n:''}).catch(()=>{});}
 async function fetchRecords(){if(!sb)return;try{const {data,error}=await sb.from('bo_records').select('name,kind,score,data').order('score',{ascending:false}).limit(300);if(error)throw error;netRecs=data||[];drawRank();if(ui==='board')renderBoard();if(ui==='shop'&&shopTab==='rank')renderShop();}catch(e){}}
 async function pushRecord(kind,score,data){if(!sb||!nick)return;try{await sb.from('bo_records').insert({name:nick,kind,score:Math.round(score),data:{...data,uid:myId}});fetchRecords();}catch(e){}}
 function netTick(dt){
+  gdT-=dt;if(chan&&online&&gdT<=0){const g=gardenPayload(),k=JSON.stringify(g);if(k!==lastGd||gdT<-4){chan.send({type:'broadcast',event:'gd',payload:g}).catch(()=>{});lastGd=k;gdT=1;}else gdT=1;}
   bestT-=dt;if(bestDirty&&bestT<=0&&best>=60&&shoutA<.05){bestDirty=false;bestT=6;pushRecord('db',best,{});}
   sendT-=dt;if(chan&&online&&sendT<=0){const stx=$('#shoutTxt'),pl={id:tabId,x:+P.pos.x.toFixed(2),z:+P.pos.z.toFixed(2),ry:+P.c.g.rotation.y.toFixed(2),mv:P.walk>.05?1:0,sh:+shoutA.toFixed(2),tx:shoutA>.35?stx.textContent:'',fx:active&&shoutA>.3?active.x:null,fz:active&&shoutA>.3?active.z:null};
     const key=JSON.stringify(pl);if(key!==lastSent||sendT<-1){chan.send({type:'broadcast',event:'pos',payload:pl}).catch(()=>{});lastSent=key;sendT=.1;}else sendT=.1;}
@@ -1012,7 +1025,8 @@ let nick=store.get('nick','');
 
 /* ================= modes ================= */
 let pendingEnter=false;
-function enterGame(){audioInit();if(!nick){pendingEnter=true;openUI('custom');toast('먼저 다른 농부들에게 보일 닉네임을 정해주세요',3.5);setTimeout(()=>$('#cNick').focus(),100);return;}netJoin();if(!micOn&&!micDenied)startMic();if(document.activeElement)document.activeElement.blur();mode='play';$('#menu').classList.add('hide');document.body.classList.add('play');buildPlayer();updateHUD();
+let touchHint=false;
+function enterGame(){if(!touchHint&&matchMedia('(pointer:coarse)').matches&&nick){touchHint=true;setTimeout(()=>toast('한 손가락 드래그: 화면 회전 · 두 손가락: 확대/축소',4),2600);}audioInit();if(!nick){pendingEnter=true;openUI('custom');toast('먼저 다른 농부들에게 보일 닉네임을 정해주세요',3.5);setTimeout(()=>$('#cNick').focus(),100);return;}netJoin();if(!micOn&&!micDenied)startMic();if(document.activeElement)document.activeElement.blur();mode='play';$('#menu').classList.add('hide');document.body.classList.add('play');buildPlayer();updateHUD();
   if(event)$('#event').style.display='block';camera.position.set(P.pos.x,10,P.pos.z+12.5);toast(time?'다시 왔어요! 텃밭이 기다려요':'텃밭으로 걸어가서 씨앗을 심어보세요!');}
 function toMenu(){closeUI();mode='menu';$('#menu').classList.remove('hide');document.body.classList.remove('play');$('#panel').style.display='none';$('#prompt').style.display='none';$('#event').style.display='none';
   $('#mEnterT').textContent='계속하기';$('#mEnterSub').textContent='텃밭으로 돌아가기';$$('.bubble,.ptitle,.ntag,.rshout,#shoutTxt').forEach(b=>b.style.display='none');if(chan&&online)chan.untrack().catch(()=>{});$('#focus').style.opacity=0;shoutA=0;}
@@ -1039,7 +1053,17 @@ addEventListener('keydown',e=>{keys[e.code]=true;
   if(e.code==='KeyT'&&!ui&&!e.repeat){if(event)endEvent();startEvent();}});
 addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space')holdLoud=false;if(e.code==='KeyQ')holdSoft=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;holdLoud=holdSoft=false;});
-$('#c').addEventListener('click',onClick);
+// 화면 회전: 한 손가락(마우스) 드래그 / 확대·축소: 두 손가락 핀치, 마우스 휠
+const cvs=$('#c'),ptrs=new Map();let pinch0=0,dist0=1;
+cvs.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false});try{cvs.setPointerCapture(e.pointerId);}catch(_){}
+  if(ptrs.size===2){ptrs.forEach(p=>p.moved=true);const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);dist0=camDist;}});
+cvs.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x;p.x=e.clientX;p.y=e.clientY;
+  if(ptrs.size>=2){const [a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0&&d>0)camDist=clamp(dist0*pinch0/d,.55,1.6);return;}
+  if(!p.moved&&Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>8)p.moved=true;if(p.moved&&mode==='play'&&!ui)camYaw-=dx*.009;});
+const endPtr=e=>{const p=ptrs.get(e.pointerId);if(!p)return;ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=0;if(!p.moved&&e.type==='pointerup')onClick(e);};
+cvs.addEventListener('pointerup',endPtr);cvs.addEventListener('pointercancel',endPtr);
+cvs.addEventListener('wheel',e=>{if(mode!=='play')return;e.preventDefault();camDist=clamp(camDist*(1+Math.sign(e.deltaY)*.08),.55,1.6);},{passive:false});
+addEventListener('orientationchange',()=>setTimeout(()=>{if(renderer)resize();},300));
 const hold=(el,on)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();on(true);el.setPointerCapture&&el.setPointerCapture(e.pointerId);});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,()=>on(false)));};
 hold($('#bLoud'),v=>holdLoud=v);hold($('#bSoft'),v=>holdSoft=v);
 $('#bMic').addEventListener('click',()=>startMic());
